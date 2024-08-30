@@ -31,13 +31,17 @@ STDIN.each do |line|
     state = nstate.clone
     ch += clen
   end
-  add_transition(matrix, state, :end)
 end
 # Normalize the state counts
 matrix.each_key do |k|
   sum = matrix[k].each_value.sum
   matrix[k].each_key do |kk|
-    matrix[k][kk] /= sum.to_f
+    val = ((matrix[k][kk] / sum.to_f) * 65536).to_i
+    if val > 0
+      matrix[k][kk] = val
+    else
+      matrix[k].delete(kk)
+    end
   end
 end
 p matrix
