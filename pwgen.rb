@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+$randombits = 0.0
+
 def random_bytes(nbytes)
   File.open("/dev/random", "r") do |fp|
     return(fp.read(nbytes))
@@ -8,6 +10,7 @@ end
 
 def randnum(max)
   bits = Math.log(max) / Math.log(2)
+  $randombits += bits
   nbits = bits.ceil
   nbytes = (nbits / 8.0).ceil
   val = max + 1
@@ -65,4 +68,5 @@ nums.times do
   output[pos] = num
 end
 puts "Password: #{output}"
+puts "Entropy: #{$randombits}"
 
