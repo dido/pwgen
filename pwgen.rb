@@ -6,6 +6,21 @@ def random_bytes(nbytes)
   end
 end
 
+def randnum(max)
+  bits = Math.log(max) / Math.log(2)
+  nbits = bits.ceil
+  nbytes = (nbits / 8.0).ceil
+  rnd = random_bytes(nbytes)
+  rnd = rnd.bytes.to_a
+  numer = 0
+  denom = 1
+  rnd.each do |val|
+    numer = numer * 256 + val
+    denom *= 256
+  end
+  return((numer * max)/denom)
+end
+
 def rand()
   rnd = random_bytes(8)
   rnd = rnd.bytes.to_a
@@ -16,69 +31,45 @@ def rand()
   return(rval/256.0)
 end
 
-def depth(m, d)
-  if m[0].is_a?(Array)
-    return(depth(m[0], d+1))
-  end
-  return(d)
-end
-
-def tblidx(mtx, indices)
-  m = mtx
-  indices.each do |idx|
-    m = m[idx]
-  end
-  return(m)
-end
-
-def incidx(indices)
-  val = indices.inject(0) {|x,y| x*26 + y}
-  val += 1
-  idx = []
-  indices.length.times { idx.unshift(val % 26); val = val / 26 }
-  return(idx)
-end
-
-freqtbl = File.open(ARGV[0]) {|fp| eval(fp.read) }
-s = freqtbl.flatten.sum.to_i
-d = depth(freqtbl, 1)
-output = Array.new(d, 0)
-ranno = rand()
-sum = 0.0
-until sum >= ranno
-  while (t = tblidx(freqtbl,output)) == 0.0 do
-    output = incidx(output)
-  end
-  sum += t
-  if sum < ranno
-    output = incidx(output)
-  end
-end
+matrix = File.open(ARGV[0]) {|fp| eval(fp.read) }
 pwl = ARGV[1].to_i
-nchar = d
-while nchar < pwl do
-  ctx = output[nchar-d+1, d-1]
-  ctx.append(0)
-  sum = 0
-  row = []
-  0.upto(25) do |x|
-    ctx[-1] = x
-    row << tblidx(freqtbl, ctx)
-    sum += tblidx(freqtbl, ctx)
-  end
-  if (sum == 0)
-    puts "sum was 0"
-    exit(1)
-  end
-  ranno = rand() * sum
+ncaps = (ARGV[2].to_s =~ /^[0-9]+$/) ? ARGV[2].to_i : randnum(pwl/4) + 1
+nums = (ARGV[3].nil?) ? 0 : ARGV[3].to_i
+depth = matrix[:start].keys.inject(0) {|x,y| (y.length > x) ? y.length : x }
+state = :start
+output = ""
+while output.length < pwl do
+  ranno = rand()
   sum = 0.0
-  row.each_index do |i|
-    sum += row[i]
-    if sum > ranno
-      output << i
+  nextstate = nil
+  matrix[state].each_pair do |k,v|
+    sum += v
+    if sum >= ranno
+      nextstate = k
       break
     end
   end
-  nchar += 1
+  if nextstate == :end
+    state = :start
+  else
+    output << nextstate
+    state = nextstate
+  end
 end
-puts output.map { |x| x + 97 }.pack("c*")
+
+output = output[0,pwl]
+choices = (0..output.length).to_a
+capletters = []
+ncaps.times do
+  choice = randnum(choices.length-1)
+  capletters << choices[choice]
+  choices.delete(choices[choice])
+end
+capletters.each { |choice| output[choice] = output[choice].capitalize }
+nums.times do
+  pos = randnum(output.length)
+  num = [randnum(10) + 0x30].pack("c")
+  output[pos] = num
+end
+puts "Password: #{output}"
+
