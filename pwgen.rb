@@ -10,25 +10,17 @@ def randnum(max)
   bits = Math.log(max) / Math.log(2)
   nbits = bits.ceil
   nbytes = (nbits / 8.0).ceil
-  rnd = random_bytes(nbytes)
-  rnd = rnd.bytes.to_a
-  numer = 0
-  denom = 1
-  rnd.each do |val|
-    numer = numer * 256 + val
-    denom *= 256
+  val = max + 1
+  while val >= max
+    rnd = random_bytes(nbytes)
+    rnd = rnd.bytes.to_a
+    val = 0
+    val = rnd.inject(0) { |v, n| v*256 + n }
+    if nbits < 8
+      val &= (1 << nbits) - 1
+    end
   end
-  return((numer * max)/denom)
-end
-
-def rand()
-  rnd = random_bytes(8)
-  rnd = rnd.bytes.to_a
-  rval = 0.0
-  rnd.each do |val|
-    rval = rval/256.0 + val
-  end
-  return(rval/256.0)
+  return(val)
 end
 
 matrix = File.open(ARGV[0]) {|fp| eval(fp.read) }
@@ -39,9 +31,10 @@ depth = matrix[:start].keys.inject(0) {|x,y| (y.length > x) ? y.length : x }
 state = :start
 output = ""
 while output.length < pwl do
-  ranno = rand()
+  ranno = randnum(65536)
   sum = 0.0
   nextstate = nil
+  state = :start if matrix[state].nil?
   matrix[state].each_pair do |k,v|
     sum += v
     if sum >= ranno
@@ -49,7 +42,7 @@ while output.length < pwl do
       break
     end
   end
-  if nextstate == :end
+  if nextstate.nil?
     state = :start
   else
     output << nextstate
