@@ -1,28 +1,55 @@
 #!/usr/bin/env ruby
+# Generate a password by rolling dice
 
 $randombits = 0.0
+$dicerolls = 0
+$entropy = Rational(0,1)
+$ebits = 0.0
+$faces = 20
+
+def get_roll(faces=$faces)
+  roll = 0
+  loop do
+    print "#{"%02f" % $randombits} Rolld#{faces}: "
+    roll = STDIN.gets().chomp
+    roll = roll.to_i
+    break if roll >= 1 && roll <= faces
+    puts "Enter input between 1 and #{faces}"
+  end
+  $entropy /= faces
+  $entropy += Rational(roll-1, faces)
+  bits = Math.log(faces) / Math.log(2)
+  $ebits += bits
+  $randombits += bits
+end
 
 def random_bytes(nbytes)
-  File.open("/dev/random", "r") do |fp|
-    return(fp.read(nbytes))
+  # File.open("/dev/random", "r") do |fp|
+  #   return(fp.read(nbytes))
+  # end
+  bytes = []
+  while bytes.length < nbytes do
+    get_roll()
+    next if $ebits < 8
+    $entropy *= 256
+    b = $entropy.floor
+    $entropy -= b
+    $ebits -= 8
+    bytes << b
   end
+  return(bytes)
 end
 
 def randnum(max)
   bits = Math.log(max) / Math.log(2)
-  $randombits += bits
   nbits = bits.ceil
-  nbytes = (nbits / 8.0).ceil
-  val = max + 1
-  while val >= max
-    rnd = random_bytes(nbytes)
-    rnd = rnd.bytes.to_a
-    val = 0
-    val = rnd.inject(0) { |v, n| v*256 + n }
-    if nbits < 8
-      val &= (1 << nbits) - 1
-    end
+  while $ebits < bits
+    get_roll()
   end
+  $entropy *= max
+  val = $entropy.floor
+  $entropy -= val
+  $ebits -= bits
   return(val)
 end
 
@@ -34,10 +61,14 @@ depth = matrix[:start].keys.inject(0) {|x,y| (y.length > x) ? y.length : x }
 state = :start
 output = ""
 while output.length < pwl do
-  ranno = randnum(65536)
-  sum = 0.0
+  p state
+  sum = 0
   nextstate = nil
   state = :start if matrix[state].nil?
+  smax = matrix[state].values.sum
+  p smax
+  ranno = randnum(smax)
+  p $ebits
   matrix[state].each_pair do |k,v|
     sum += v
     if sum >= ranno

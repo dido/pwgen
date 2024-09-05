@@ -32,16 +32,16 @@ STDIN.each do |line|
     ch += clen
   end
 end
-# Normalize the state counts
-matrix.each_key do |k|
-  sum = matrix[k].each_value.sum
-  matrix[k].each_key do |kk|
-    val = ((matrix[k][kk] / sum.to_f) * 65536).to_i
-    if val > 0
-      matrix[k][kk] = val
-    else
-      matrix[k].delete(kk)
-    end
-  end
-end
+# # Normalize the state counts
+# matrix.each_key do |k|
+#   sum = matrix[k].each_value.sum
+#   matrix[k].each_key do |kk|
+#     val = (matrix[k][kk]*65536)/ sum
+#     if val > 0
+#       matrix[k][kk] = val
+#     else
+#       matrix[k].delete(kk)
+#     end
+#   end
+# end
 p matrix
