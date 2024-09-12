@@ -5,7 +5,7 @@ module PWGen
   # arithmetic coded pool of random numbers obtained either by dice
   # rolls input by the user or /dev/random.
   class XRandom
-    attr_reader :entropy, :ebits, :randombits
+    attr_accessor :entropy, :ebits, :randombits
 
     ##
     # Create a new random number generator. The faces parameter
@@ -105,21 +105,22 @@ module PWGen
                      p = y[1].to_f/sum
                      x + p*Math.log2(p)
                    end)
-      while @ebits < ventropy
-        seed()
-      end
       pcsum = 0
       csum = 0
       pp = nil
       vals.each_pair do |k, f|
         p = Rational(f, sum)
+        ereq = -Math.log2(p)
+        while ereq > @ebits
+          seed()
+        end
         pcsum = csum
         csum += p
         if csum > @entropy
           @entropy -= pcsum
           pp ||= p
           @entropy /= p
-          @ebits -= ventropy
+          @ebits -= ereq
           @randombits += ventropy
           return(k)
         end
@@ -128,3 +129,14 @@ module PWGen
     end
   end
 end
+
+vals = {1=>50, 2=>25, 3=>25}
+rng = PWGen::XRandom.new(0)
+rng.seed()
+rng.seed()
+rng.seed()
+16.times do
+  p [:ebits, rng.ebits, rng.entropy]
+  p rng.randval(vals)
+end
+p rng.ebits
