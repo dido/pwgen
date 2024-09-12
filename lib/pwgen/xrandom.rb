@@ -38,7 +38,7 @@ module PWGen
     # Prompt for a random number from the user.
     def diceprompt()
       loop do
-        print "#{"%02f" % @randombits} Rolld#{@faces}: "
+        print "#{"%02f" % @entropy} Rolld#{@faces}: "
         roll = STDIN.gets().chomp
         roll = roll.to_i
         return(roll) if roll >= 1 && roll <= @faces
@@ -49,11 +49,10 @@ module PWGen
     ##
     # Seed the RNG from dice rolls
     def get_roll()
-      roll = 0
-      diceprompt()
-      @entropy /= faces
-      @entropy += Rational(roll-1, faces)
-      bits = Math.log2(faces)
+      roll=diceprompt()
+      @entropy /= @faces
+      @entropy += Rational(roll-1, @faces)
+      bits = Math.log2(@faces)
       @ebits += bits
     end
 
