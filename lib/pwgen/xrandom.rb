@@ -130,13 +130,3 @@ module PWGen
   end
 end
 
-vals = {1=>50, 2=>25, 3=>25}
-rng = PWGen::XRandom.new(0)
-rng.seed()
-rng.seed()
-rng.seed()
-16.times do
-  p [:ebits, rng.ebits, rng.entropy]
-  p rng.randval(vals)
-end
-p rng.ebits
