@@ -38,7 +38,7 @@ module PWGen
     # Prompt for a random number from the user.
     def diceprompt()
       loop do
-        print "#{"%02f" % @entropy} Rolld#{@faces}: "
+        print "Rolld#{@faces}: "
         roll = STDIN.gets().chomp
         roll = roll.to_i
         return(roll) if roll >= 1 && roll <= @faces
