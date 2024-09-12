@@ -1,9 +1,17 @@
 
 module PWGen
+  ##
+  # Random number generator. This basically works by maintaining an
+  # arithmetic coded pool of random numbers obtained either by dice
+  # rolls input by the user or /dev/random.
   class XRandom
     attr_reader :entropy, :ebits, :randombits
 
-    def initialize(faces=20)
+    ##
+    # Create a new random number generator. The faces parameter
+    # gives the number of faces to use for the dice by default.
+    # If set to 0, it will use /dev/random.
+    def initialize(faces=0)
       @randombits = 0.0
       @dicerolls = 0
       @entropy = Rational(0,1)
@@ -12,7 +20,7 @@ module PWGen
     end
 
     def seed()
-      (@faces <= 1) ? devrandom() : get_roll()
+      (@faces < 1) ? devrandom() : get_roll()
     end
 
     ##
@@ -27,22 +35,31 @@ module PWGen
     end
 
     ##
-    # Seed the RNG from dice rolls
-    def get_roll()
-      roll = 0
+    # Prompt for a random number from the user.
+    def diceprompt()
       loop do
         print "#{"%02f" % @randombits} Rolld#{@faces}: "
         roll = STDIN.gets().chomp
         roll = roll.to_i
-        break if roll >= 1 && roll <= @faces
+        return(roll) if roll >= 1 && roll <= @faces
         puts "Enter input between 1 and #{@faces}"
       end
+    end
+    
+    ##
+    # Seed the RNG from dice rolls
+    def get_roll()
+      roll = 0
+      diceprompt()
       @entropy /= faces
       @entropy += Rational(roll-1, faces)
-      bits = Math.log(faces) / Math.log(2)
+      bits = Math.log2(faces)
       @ebits += bits
     end
 
+    ##
+    # Get nbytes random bytes from the system, reseed the entropy pool
+    # as needed.
     def random_bytes(nbytes)
       # File.open("/dev/random", "r") do |fp|
       #   return(fp.read(nbytes))
@@ -60,9 +77,10 @@ module PWGen
       return(bytes)
     end
 
+    ##
+    # Get a random number from 0 to max-1 from the entropy pool.
     def randnum(max)
-      bits = Math.log(max) / Math.log(2)
-      nbits = bits.ceil
+      bits = Math.log2(max)
       while @ebits < bits
         seed()
       end
@@ -72,6 +90,42 @@ module PWGen
       @ebits -= bits
       @randombits += bits
       return(val)
+    end
+
+    ##
+    # Given a hash with value and frequency pairs, choose a random
+    # value based on the frequency.  This will basically attempt to
+    # decode the arithmetic encoded entropy pool, using the frequency
+    # as the statistical model. This feels a little mathematically
+    # dubious though.
+    def randval(vals)
+      # Estimate the entropy of the distribution based on the
+      # frequency.
+      sum = vals.values.sum
+      ventropy = -(vals.inject(0.0) do |x,y|
+                     p = y[1].to_f/sum
+                     x + p*Math.log2(p)
+                   end)
+      while @ebits < ventropy
+        seed()
+      end
+      pcsum = 0
+      csum = 0
+      pp = nil
+      vals.each_pair do |k, f|
+        p = Rational(f, sum)
+        pcsum = csum
+        csum += p
+        if csum > @entropy
+          @entropy -= pcsum
+          pp ||= p
+          @entropy /= p
+          @ebits -= ventropy
+          @randombits += ventropy
+          return(k)
+        end
+        pp = p
+      end
     end
   end
 end
